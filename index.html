@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JSON to Text Tool</title>
 <style>
-  /* Light mode colors */
   :root {
     --background: #FFFFFF;
     --surface: #F8F9FA;
@@ -16,8 +15,6 @@
     --accent: #9C63FF;
     --accent-light: #DCD4FF;
   }
-
-  /* Dark mode colors */
   @media (prefers-color-scheme: dark) {
     :root {
       --background: #0E0C17;
@@ -31,53 +28,14 @@
     }
   }
 
-  body {
-    background-color: var(--background);
-    color: var(--text);
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 20px;
-  }
-
-  h1 {
-    color: var(--primary);
-  }
-
-  textarea {
-    width: 100%;
-    height: 150px;
-    background: var(--surface);
-    border: 2px solid var(--accent);
-    color: var(--text);
-    padding: 10px;
-    font-family: monospace;
-    font-size: 14px;
-    margin-bottom: 10px;
-    border-radius: 8px;
-  }
-
-  button {
-    background-color: var(--primary);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    font-size: 16px;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-
-  button:hover {
-    background-color: var(--primary-dark);
-  }
-
-  #output {
-    white-space: pre-wrap;
-    background: var(--surface);
-    padding: 10px;
-    border-radius: 8px;
-    border: 2px solid var(--accent-light);
-    min-height: 100px;
-  }
+  body { background-color: var(--background); color: var(--text); font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+  h1 { color: var(--primary); }
+  textarea { width: 100%; height: 150px; background: var(--surface); border: 2px solid var(--accent); color: var(--text); padding: 10px; font-family: monospace; font-size: 14px; margin-bottom: 10px; border-radius: 8px; }
+  button { background-color: var(--primary); color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; margin-top: 5px; }
+  button:hover { background-color: var(--primary-dark); }
+  #output { margin-top: 20px; }
+  .conversion { background: var(--surface); padding: 10px; border-radius: 8px; border: 2px solid var(--accent-light); margin-bottom: 10px; position: relative; }
+  .speaker { position: absolute; right: 10px; top: 10px; cursor: pointer; font-size: 20px; color: var(--accent); }
 </style>
 </head>
 <body>
@@ -85,31 +43,32 @@
 <h1>JSON to Text Converter</h1>
 <textarea id="jsonInput" placeholder="Paste JSON here..."></textarea>
 <button onclick="convertJSON()">Convert to Text</button>
-<h2>Output</h2>
 <div id="output"></div>
 
 <script>
+const outputDiv = document.getElementById('output');
+
+// Load history from localStorage
+let history = JSON.parse(localStorage.getItem('jsonHistory') || '[]');
+renderHistory();
+
 function convertJSON() {
   const input = document.getElementById('jsonInput').value;
-  const output = document.getElementById('output');
-  
   try {
     const obj = JSON.parse(input);
-    output.textContent = jsonToText(obj);
+    const text = jsonToText(obj);
+    saveConversion(text);
   } catch (e) {
-    output.textContent = 'Invalid JSON: ' + e.message;
+    alert('Invalid JSON: ' + e.message);
   }
 }
 
 function jsonToText(obj, indent = 0) {
   let text = '';
   const space = '  '.repeat(indent);
-
   if (typeof obj === 'object' && obj !== null) {
     if (Array.isArray(obj)) {
-      obj.forEach((item, i) => {
-        text += space + '- ' + jsonToText(item, indent + 1).trim() + '\n';
-      });
+      obj.forEach((item) => { text += space + '- ' + jsonToText(item, indent + 1).trim() + '\n'; });
     } else {
       for (const key in obj) {
         text += space + key + ': ';
@@ -120,11 +79,30 @@ function jsonToText(obj, indent = 0) {
         }
       }
     }
-  } else {
-    text += obj + '\n';
-  }
-
+  } else { text += obj + '\n'; }
   return text;
+}
+
+function saveConversion(text) {
+  history.unshift(text);
+  if (history.length > 20) history.pop(); // limit history to last 20
+  localStorage.setItem('jsonHistory', JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  outputDiv.innerHTML = '';
+  history.forEach((text, index) => {
+    const div = document.createElement('div');
+    div.className = 'conversion';
+    div.innerHTML = `<pre>${text}</pre><span class="speaker" onclick="speakText(${index})">&#128266;</span>`;
+    outputDiv.appendChild(div);
+  });
+}
+
+function speakText(index) {
+  const utterance = new SpeechSynthesisUtterance(history[index]);
+  speechSynthesis.speak(utterance);
 }
 </script>
 
