@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JSON to Text Tool</title>
+<title>JSON/Text Converter</title>
 <style>
   :root {
     --background: #FFFFFF;
@@ -15,7 +15,6 @@
     --accent: #9C63FF;
     --accent-light: #DCD4FF;
   }
-
   @media (prefers-color-scheme: dark) {
     :root {
       --background: #0E0C17;
@@ -30,14 +29,19 @@
   }
 
   body {
-    background-color: var(--background);
+    background: var(--background);
     color: var(--text);
     font-family: Arial, sans-serif;
-    margin: 0;
     padding: 20px;
+    margin: 0;
   }
-
   h1 { color: var(--primary); }
+
+  .toolbar {
+    margin-bottom: 10px;
+    display: flex;
+    gap: 10px;
+  }
 
   textarea {
     width: 100%;
@@ -48,9 +52,9 @@
     padding: 10px;
     font-family: monospace;
     font-size: 14px;
-    margin-bottom: 10px;
     border-radius: 8px;
     box-sizing: border-box;
+    margin-bottom: 10px;
   }
 
   button {
@@ -61,35 +65,30 @@
     font-size: 16px;
     border-radius: 8px;
     cursor: pointer;
-    margin-top: 5px;
   }
 
   button:hover { background-color: var(--primary-dark); }
 
-  #output { margin-top: 20px; }
-
-  .conversion {
+  #output {
+    margin-top: 20px;
     background: var(--surface);
     padding: 10px;
     border-radius: 8px;
     border: 2px solid var(--accent-light);
-    margin-bottom: 10px;
-    position: relative;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-  }
-
-  .conversion pre {
     white-space: pre-wrap;
     word-wrap: break-word;
     overflow-wrap: break-word;
-    margin: 0;
+    min-height: 100px;
+    position: relative;
   }
 
-  .speaker {
-    position: absolute;
-    right: 10px;
-    top: 10px;
+  .buttons {
+    margin-top: 5px;
+    display: flex;
+    gap: 10px;
+  }
+
+  .buttons span {
     cursor: pointer;
     font-size: 20px;
     color: var(--accent);
@@ -98,38 +97,84 @@
 </head>
 <body>
 
-<h1>JSON to Text Converter</h1>
-<textarea id="jsonInput" placeholder="Paste JSON here..."></textarea>
-<button id="convertBtn">Convert to Text</button>
+<h1>JSON / Text Converter</h1>
+
+<label>
+  <input type="radio" name="mode" value="jsonToText" checked> JSON → Text
+</label>
+<label>
+  <input type="radio" name="mode" value="textToJson"> Text → JSON
+</label>
+
+<div class="toolbar">
+  <button id="pasteBtn">📋 Paste</button>
+  <button id="convertBtn">Convert</button>
+</div>
+
+<textarea id="inputArea" placeholder="Paste JSON or text here..."></textarea>
+
 <div id="output"></div>
+<div class="buttons">
+  <span id="speakerBtn" title="Read Aloud">&#128266;</span>
+  <span id="copyBtn" title="Copy">&#128203;</span>
+</div>
 
 <script>
-const outputDiv = document.getElementById('output');
+const inputArea = document.getElementById('inputArea');
 const convertBtn = document.getElementById('convertBtn');
+const pasteBtn = document.getElementById('pasteBtn');
+const outputDiv = document.getElementById('output');
+const speakerBtn = document.getElementById('speakerBtn');
+const copyBtn = document.getElementById('copyBtn');
 
-// Load history from localStorage
-let history = JSON.parse(localStorage.getItem('jsonHistory') || '[]');
-renderHistory();
+let currentText = '';
+let currentMode = 'jsonToText';
 
-convertBtn.addEventListener('click', () => {
-  const input = document.getElementById('jsonInput').value;
+document.querySelectorAll('input[name="mode"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    currentMode = radio.value;
+    outputDiv.textContent = '';
+    currentText = '';
+  });
+});
+
+// Paste button
+pasteBtn.addEventListener('click', async () => {
   try {
-    const obj = JSON.parse(input);
-    const text = jsonToText(obj);
-    saveConversion(text);
+    const text = await navigator.clipboard.readText();
+    inputArea.value = text;
   } catch (e) {
-    alert('Invalid JSON: ' + e.message);
+    alert('Failed to read clipboard: ' + e.message);
   }
 });
 
+// Convert button
+convertBtn.addEventListener('click', () => {
+  const input = inputArea.value.trim();
+  if (!input) {
+    alert('Please enter input');
+    return;
+  }
+  try {
+    if (currentMode === 'jsonToText') {
+      const obj = JSON.parse(input);
+      currentText = jsonToText(obj);
+    } else { // textToJson
+      currentText = JSON.stringify(textToJson(input), null, 2);
+    }
+    outputDiv.textContent = currentText;
+  } catch (e) {
+    outputDiv.textContent = 'Error: ' + e.message;
+  }
+});
+
+// JSON → Text conversion
 function jsonToText(obj, indent = 0) {
   let text = '';
   const space = '  '.repeat(indent);
   if (typeof obj === 'object' && obj !== null) {
     if (Array.isArray(obj)) {
-      obj.forEach((item) => {
-        text += space + '- ' + jsonToText(item, indent + 1).trim() + '\n';
-      });
+      obj.forEach(item => { text += space + '- ' + jsonToText(item, indent + 1).trim() + '\n'; });
     } else {
       for (const key in obj) {
         text += space + key + ': ';
@@ -146,42 +191,39 @@ function jsonToText(obj, indent = 0) {
   return text;
 }
 
-function saveConversion(text) {
-  history.unshift(text);
-  if (history.length > 20) history.pop(); // limit history to last 20
-  localStorage.setItem('jsonHistory', JSON.stringify(history));
-  renderHistory();
-}
-
-function renderHistory() {
-  outputDiv.innerHTML = '';
-  history.forEach((text, index) => {
-    const div = document.createElement('div');
-    div.className = 'conversion';
-    
-    const pre = document.createElement('pre');
-    pre.textContent = text;
-    
-    const speaker = document.createElement('span');
-    speaker.className = 'speaker';
-    speaker.innerHTML = '&#128266;'; // speaker icon
-    speaker.addEventListener('click', () => speakText(index));
-    
-    div.appendChild(pre);
-    div.appendChild(speaker);
-    outputDiv.appendChild(div);
+// Text → JSON conversion
+function textToJson(text) {
+  const obj = {};
+  const lines = text.split('\n').filter(l => l.trim() !== '');
+  lines.forEach(line => {
+    const idx = line.indexOf(':');
+    if (idx > 0) {
+      const key = line.slice(0, idx).trim();
+      const val = line.slice(idx + 1).trim();
+      obj[key] = isNaN(val) ? val : Number(val);
+    }
   });
+  return obj;
 }
 
-function speakText(index) {
-  const text = history[index];
-  if (!text) return alert('Nothing to speak');
-  speechSynthesis.cancel(); // stop any ongoing speech
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 1;  // normal speed
-  utterance.pitch = 1; // normal pitch
+// Speaker button
+speakerBtn.addEventListener('click', () => {
+  if (!currentText) return alert('Nothing to read');
+  if (!window.speechSynthesis) return alert('SpeechSynthesis not supported');
+  speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(currentText);
+  utterance.rate = 1;
+  utterance.pitch = 1;
   speechSynthesis.speak(utterance);
-}
+});
+
+// Copy button
+copyBtn.addEventListener('click', () => {
+  if (!currentText) return alert('Nothing to copy');
+  navigator.clipboard.writeText(currentText)
+    .then(() => alert('Copied to clipboard'))
+    .catch(() => alert('Copy failed'));
+});
 </script>
 
 </body>
