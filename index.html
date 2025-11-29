@@ -100,17 +100,18 @@
 
 <h1>JSON to Text Converter</h1>
 <textarea id="jsonInput" placeholder="Paste JSON here..."></textarea>
-<button onclick="convertJSON()">Convert to Text</button>
+<button id="convertBtn">Convert to Text</button>
 <div id="output"></div>
 
 <script>
 const outputDiv = document.getElementById('output');
+const convertBtn = document.getElementById('convertBtn');
 
 // Load history from localStorage
 let history = JSON.parse(localStorage.getItem('jsonHistory') || '[]');
 renderHistory();
 
-function convertJSON() {
+convertBtn.addEventListener('click', () => {
   const input = document.getElementById('jsonInput').value;
   try {
     const obj = JSON.parse(input);
@@ -119,7 +120,7 @@ function convertJSON() {
   } catch (e) {
     alert('Invalid JSON: ' + e.message);
   }
-}
+});
 
 function jsonToText(obj, indent = 0) {
   let text = '';
@@ -157,7 +158,17 @@ function renderHistory() {
   history.forEach((text, index) => {
     const div = document.createElement('div');
     div.className = 'conversion';
-    div.innerHTML = `<pre>${text}</pre><span class="speaker" onclick="speakText(${index})">&#128266;</span>`;
+    
+    const pre = document.createElement('pre');
+    pre.textContent = text;
+    
+    const speaker = document.createElement('span');
+    speaker.className = 'speaker';
+    speaker.innerHTML = '&#128266;'; // speaker icon
+    speaker.addEventListener('click', () => speakText(index));
+    
+    div.appendChild(pre);
+    div.appendChild(speaker);
     outputDiv.appendChild(div);
   });
 }
@@ -165,7 +176,7 @@ function renderHistory() {
 function speakText(index) {
   const text = history[index];
   if (!text) return alert('Nothing to speak');
-  speechSynthesis.cancel(); // stop any previous speech
+  speechSynthesis.cancel(); // stop any ongoing speech
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.rate = 1;  // normal speed
   utterance.pitch = 1; // normal pitch
