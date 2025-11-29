@@ -15,6 +15,7 @@
     --accent: #9C63FF;
     --accent-light: #DCD4FF;
   }
+
   @media (prefers-color-scheme: dark) {
     :root {
       --background: #0E0C17;
@@ -28,14 +29,71 @@
     }
   }
 
-  body { background-color: var(--background); color: var(--text); font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+  body {
+    background-color: var(--background);
+    color: var(--text);
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+  }
+
   h1 { color: var(--primary); }
-  textarea { width: 100%; height: 150px; background: var(--surface); border: 2px solid var(--accent); color: var(--text); padding: 10px; font-family: monospace; font-size: 14px; margin-bottom: 10px; border-radius: 8px; }
-  button { background-color: var(--primary); color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; margin-top: 5px; }
+
+  textarea {
+    width: 100%;
+    height: 150px;
+    background: var(--surface);
+    border: 2px solid var(--accent);
+    color: var(--text);
+    padding: 10px;
+    font-family: monospace;
+    font-size: 14px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    box-sizing: border-box;
+  }
+
+  button {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 5px;
+  }
+
   button:hover { background-color: var(--primary-dark); }
+
   #output { margin-top: 20px; }
-  .conversion { background: var(--surface); padding: 10px; border-radius: 8px; border: 2px solid var(--accent-light); margin-bottom: 10px; position: relative; }
-  .speaker { position: absolute; right: 10px; top: 10px; cursor: pointer; font-size: 20px; color: var(--accent); }
+
+  .conversion {
+    background: var(--surface);
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px solid var(--accent-light);
+    margin-bottom: 10px;
+    position: relative;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .conversion pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    margin: 0;
+  }
+
+  .speaker {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    cursor: pointer;
+    font-size: 20px;
+    color: var(--accent);
+  }
 </style>
 </head>
 <body>
@@ -68,7 +126,9 @@ function jsonToText(obj, indent = 0) {
   const space = '  '.repeat(indent);
   if (typeof obj === 'object' && obj !== null) {
     if (Array.isArray(obj)) {
-      obj.forEach((item) => { text += space + '- ' + jsonToText(item, indent + 1).trim() + '\n'; });
+      obj.forEach((item) => {
+        text += space + '- ' + jsonToText(item, indent + 1).trim() + '\n';
+      });
     } else {
       for (const key in obj) {
         text += space + key + ': ';
@@ -79,7 +139,9 @@ function jsonToText(obj, indent = 0) {
         }
       }
     }
-  } else { text += obj + '\n'; }
+  } else {
+    text += obj + '\n';
+  }
   return text;
 }
 
@@ -101,7 +163,12 @@ function renderHistory() {
 }
 
 function speakText(index) {
-  const utterance = new SpeechSynthesisUtterance(history[index]);
+  const text = history[index];
+  if (!text) return alert('Nothing to speak');
+  speechSynthesis.cancel(); // stop any previous speech
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 1;  // normal speed
+  utterance.pitch = 1; // normal pitch
   speechSynthesis.speak(utterance);
 }
 </script>
